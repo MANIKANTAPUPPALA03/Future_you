@@ -1,0 +1,15 @@
+node_modules/
+.venv/
+venv/
+__pycache__/
+*.pyc
+.env
+*.json
+!package.json
+!tsconfig.json
+!metadata.json
+futureyou-*-firebase-adminsdk-*.json
+.DS_Store
+dist/
+build/
+.vite/
