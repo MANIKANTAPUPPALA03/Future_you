@@ -1,10 +1,49 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Header, HTTPException
+from firebase_admin import auth
 from models import ProfileCreate
 from .deps import get_current_user
 from firebase_config import db
 from datetime import datetime
 
 router = APIRouter()
+
+@router.post("/sync-user")
+def sync_user(authorization: str = Header(...)):
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Invalid Authorization header")
+    
+    token = authorization.split("Bearer ")[1]
+    try:
+        decoded_token = auth.verify_id_token(token)
+        uid = decoded_token.get('uid')
+        email = decoded_token.get('email', 'user@example.com')
+        name = decoded_token.get('name', 'User')
+        print(f"[sync-user] uid={uid}, email={email}, name={name}")
+        
+        user_ref = db.collection('users').document(uid)
+        user_doc = user_ref.get()
+        
+        if not user_doc.exists:
+            user_ref.set({
+                "profile": {
+                    "name": name,
+                    "email": email,
+                    "plan": "free",
+                    "created_at": datetime.utcnow().isoformat()
+                },
+                "streak": {
+                    "current_streak": 0,
+                    "longest_streak": 0
+                }
+            })
+            print(f"[sync-user] Created new Firestore document for {uid}")
+            return {"status": "user registered", "uid": uid}
+            
+        print(f"[sync-user] User {uid} already exists in Firestore")
+        return {"status": "user exists", "uid": uid}
+    except Exception as e:
+        print(f"[sync-user] ERROR: {e}")
+        raise HTTPException(status_code=401, detail=str(e))
 
 @router.post("/profile")
 def update_profile(req: ProfileCreate, uid: str = Depends(get_current_user)):
@@ -74,6 +113,14 @@ def export_user_data(uid: str = Depends(get_current_user)):
     if not doc.exists:
         return {"error": "No user data found"}
         
+    return doc.to_dict()
+
+@router.get("/profile")
+def get_profile(uid: str = Depends(get_current_user)):
+    user_ref = db.collection('users').document(uid)
+    doc = user_ref.get()
+    if not doc.exists:
+        return {"error": "User profile not found."}
     return doc.to_dict()
 
 @router.delete("/reset-data")

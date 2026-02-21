@@ -153,17 +153,16 @@ function AuthPage() {
     try {
       if (isLogin) {
         await signInWithEmailAndPassword(auth, email, password);
-        navigate('/dashboard');
       } else {
         await createUserWithEmailAndPassword(auth, email, password);
-        // Create the profile in backend via API call
-        await api.post('/profile', {
-          name: name || 'User',
-          email,
-          plan: 'free'
-        });
-        navigate('/initialize');
       }
+      // Sync user to Firestore (best-effort, don't block navigation)
+      try {
+        await api.post('/sync-user');
+      } catch (syncErr) {
+        console.error("sync-user failed (non-blocking):", syncErr);
+      }
+      navigate(isLogin ? '/dashboard' : '/initialize');
     } catch (err: any) {
       console.error("Auth error:", err);
       setError(err.message || 'Authentication failed');
