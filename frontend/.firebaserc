@@ -1,0 +1,15 @@
+{
+  "projects": {
+    "default": "futureyou-2021"
+  },
+  "targets": {
+    "futureyou-2021": {
+      "hosting": {
+        "default": [
+          "futureyou-2021"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}
