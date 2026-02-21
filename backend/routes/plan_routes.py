@@ -10,6 +10,7 @@ router = APIRouter()
 
 @router.post("/generate-plan")
 def create_plan(req: PlanRequest, uid: str = Depends(get_current_user)):
+    print(f"[generate-plan] Generating plan for uid={uid}")
     plan_data = generate_deterministic_plan(req)
     plan_data['created_at'] = datetime.utcnow().isoformat()
     
@@ -17,6 +18,7 @@ def create_plan(req: PlanRequest, uid: str = Depends(get_current_user)):
     user_ref.set({
         "plan": plan_data
     }, merge=True)
+    print(f"[generate-plan] Saved plan to Firestore for {uid}")
     
     return plan_data
 
@@ -43,10 +45,14 @@ def update_streak(req: StreakUpdate, uid: str = Depends(get_current_user)):
 @router.get("/dashboard")
 def get_dashboard(uid: str = Depends(get_current_user)):
     """Fetch collective user data (scores, plan, streaks)"""
+    print(f"[dashboard] Fetching data for uid={uid}")
     user_ref = db.collection('users').document(uid)
     doc = user_ref.get()
     
     if not doc.exists:
+        print(f"[dashboard] No document found for uid={uid}")
         return {"message": "User not found or no data available."}
-        
-    return doc.to_dict()
+    
+    data = doc.to_dict()
+    print(f"[dashboard] Found data keys: {list(data.keys())} for uid={uid}")
+    return data

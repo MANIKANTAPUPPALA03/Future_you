@@ -11,6 +11,7 @@ router = APIRouter()
 
 @router.post("/simulate", response_model=SimulationResponse)
 def run_simulation(req: SimulationRequest, uid: str = Depends(get_current_user)):
+    print(f"[simulate] Running simulation for uid={uid}")
     # Calculate deterministic base scores from constraints
     scores = calculate_scores(req)
     created_at = datetime.utcnow().isoformat()
@@ -21,6 +22,7 @@ def run_simulation(req: SimulationRequest, uid: str = Depends(get_current_user))
     user_ref.set({
         "constraints": req.model_dump() # Using Pydantic V2 dump
     }, merge=True)
+    print(f"[simulate] Saved constraints to Firestore for {uid}")
     
     # Save the output simulation block
     sim_data = {
@@ -30,23 +32,27 @@ def run_simulation(req: SimulationRequest, uid: str = Depends(get_current_user))
     user_ref.set({
         "simulation": sim_data
     }, merge=True)
-    
+    print(f"[simulate] Saved simulation scores to Firestore for {uid}: {scores.model_dump()}")
     
     return SimulationResponse(scores=scores, created_at=created_at)
 
 @router.get("/ai-summary")
 def get_ai_summary(uid: str = Depends(get_current_user)):
+    print(f"[ai-summary] Fetching AI summary for uid={uid}")
     user_ref = db.collection('users').document(uid)
     doc = user_ref.get()
     data = doc.to_dict() if doc.exists else {}
+    print(f"[ai-summary] User data retrieved: {data.keys() if data else 'No data'} for uid={uid}")
     
     constraints = data.get("constraints", {})
     scores = data.get("simulation", {}).get("scores", {})
     
     if not constraints or not scores:
+        print(f"[ai-summary] Constraints or scores missing for uid={uid}. Returning default message.")
         return {"summary": "Please run a simulation first to unlock AI insights."}
         
     prompt = f"Analyze these life constraints: {constraints} and generated scores: {scores}. Provide a precise, 3-sentence predictive trajectory summary on health and finance preparedness. Speak directly to the user (e.g. 'Based on your habits...')."
+    print(f"[ai-summary] Generating AI insights with prompt for uid={uid}")
     summary = generate_ai_insights(prompt)
     
     return {"summary": summary}
