@@ -158,7 +158,7 @@ function AuthPage() {
       }
       // Sync user to Firestore (best-effort, don't block navigation)
       try {
-        await api.post('/sync-user');
+        await api.post('/sync-user', { name: name || undefined });
       } catch (syncErr) {
         console.error("sync-user failed (non-blocking):", syncErr);
       }

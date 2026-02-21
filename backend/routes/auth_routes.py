@@ -1,14 +1,19 @@
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Body
 from firebase_admin import auth
 from models import ProfileCreate
 from .deps import get_current_user
 from firebase_config import db
 from datetime import datetime
+from typing import Optional
+from pydantic import BaseModel
 
 router = APIRouter()
 
+class SyncUserRequest(BaseModel):
+    name: Optional[str] = None
+
 @router.post("/sync-user")
-def sync_user(authorization: str = Header(...)):
+def sync_user(body: SyncUserRequest = Body(default=SyncUserRequest()), authorization: str = Header(...)):
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Invalid Authorization header")
     
@@ -17,7 +22,8 @@ def sync_user(authorization: str = Header(...)):
         decoded_token = auth.verify_id_token(token)
         uid = decoded_token.get('uid')
         email = decoded_token.get('email', 'user@example.com')
-        name = decoded_token.get('name', 'User')
+        # Use name from request body first, then token, then default
+        name = body.name or decoded_token.get('name') or 'User'
         print(f"[sync-user] uid={uid}, email={email}, name={name}")
         
         user_ref = db.collection('users').document(uid)
