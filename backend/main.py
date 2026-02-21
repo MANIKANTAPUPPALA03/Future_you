@@ -5,17 +5,11 @@ from routes import simulation_routes, plan_routes, auth_routes
 
 app = FastAPI(title="Future You API")
 
-# Setup CORS
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+# Setup CORS - allow all origins for debugging
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        FRONTEND_URL,
-        "https://futureyou-2021.web.app",
-        "https://futureyou-2021.firebaseapp.com",
-        "http://localhost:5173",
-    ],
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
